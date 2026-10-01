@@ -5,36 +5,13 @@ import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
 
-import '../game/shop_items.dart';
-
+// ignore: unused_field
 enum _Action { jump, slide }
 
-/// The runner avatar — an 8-frame running-cycle sprite (assets/images/
-/// redcap_sheet.png, 192x256 cells in one row): red cap, backpack, blue
-/// jacket/jeans, drawn from behind (running away from the camera).
-///
-/// Ways to survive an incoming obstacle, matching the real game:
-///  - [TrainObstacle] (tall, full-lane): dodge sideways, OR jump right as it
-///    arrives to hop onto its roof and briefly [isRiding] it instead.
-///  - [LowBarrier] (short, ground-level): [jump] over it.
-///  - [OverheadBarrier] (hangs above the track): [slide] under it.
-///
-/// "Feel" features (all visual/input only — obstacle logic is unchanged and
-/// still decided by `isJumping` / `isSliding` state at the moment of contact):
-///  - Lean into lane changes (rotates around the feet).
-///  - Squash & stretch on jump launch, landing and slide.
-///  - Frozen mid-air pose while jumping (no running legs in the air).
-///  - Slide while airborne = fast dive to the ground, then rolls into a slide.
-///  - Jump while sliding hops straight out of the slide.
-///  - Input buffering: a swipe just before you can act is queued for
-///    [_bufferWindow] seconds instead of being dropped.
-///  - Ground shadow that shrinks as you rise.
-///  - Run animation speeds up with the game via [runSpeed].
-///  - Optional [onJump] / [onSlide] / [onLand] hooks for sound and camera shake.
 class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
   static const double laneSwitchSpeed = 1400; // px/s, horizontal slide speed
   static const double jumpDuration = 0.5; // seconds, full up-and-down arc
-  static const double jumpPeakHeight = 100; // px risen at the peak of the jump
+  static const double jumpPeakHeight = 200; // px risen at the peak of the jump
   static const double boostedJumpPeak = 190; // rocket boots: much higher...
   static const double boostedJumpDuration = 0.62; // ...and a longer hang time
   static const double slideDuration = 0.45; // seconds spent ducked
@@ -83,27 +60,14 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
   /// inside something. He blinks while it lasts.
   double graceTime = 0;
 
-  /// Magnet power-up: while true, coins and keys in every lane stream toward
-  /// Jack and are collected automatically — the same pull the rocket's
-  /// autopilot uses, just without leaving the ground. Set by the game.
-  bool hasMagnet = false;
-
-  /// Purely visual: true whenever a shield is owned, so a thin ring reminds
-  /// you the next hit will be absorbed instead of ending the run.
-  bool shielded = false;
-
   bool get isFlying => flying;
   bool get isInvulnerable => flying || graceTime > 0;
   double _activePeak = jumpPeakHeight; // fixed at take-off so a jump never
   double _activeDur = jumpDuration; //   changes shape mid-air
   double _flameT = 0;
 
-  /// How far (px) the runner is lifted while standing on a train roof. The
-  /// game sets this to the train's height at the runner's depth on hop-on.
   double rideElevation = 90;
 
-  /// Current height of the runner's feet above the track (px). Used by the
-  /// barriers and coins to decide whether he is high enough / low enough.
   double get heightAboveGround => _jumpOffset;
 
   /// Hooks for the game: play sounds, shake the camera on landing, etc.
@@ -122,10 +86,6 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
 
   RectangleHitbox? _hitbox;
 
-  /// Which cap Jack is wearing (an id from [kCaps]). Set by the game before
-  /// he is added; change it later with [setCap].
-  String capId = 'red';
-
   RunnerPlayer({required this.laneXPositions, required this.fixedY})
       : super(
           size: Vector2(48, 64),
@@ -136,13 +96,7 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    await _loadCapSheet();
-    _hitbox = RectangleHitbox(size: Vector2(36, 60), position: Vector2(6, 4));
-    add(_hitbox!);
-  }
-
-  Future<void> _loadCapSheet() async {
-    final image = await Flame.images.load(capById(capId).sheet);
+    final image = await Flame.images.load('redcap_sheet.png');
     animation = SpriteAnimation.fromFrameData(
       image,
       SpriteAnimationData.sequenced(
@@ -151,12 +105,8 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
         textureSize: Vector2(_frameWidth, _frameHeight),
       ),
     );
-  }
-
-  /// Put on a different cap (used by the shop).
-  Future<void> setCap(String id) async {
-    capId = id;
-    await _loadCapSheet();
+    _hitbox = RectangleHitbox(size: Vector2(36, 60), position: Vector2(6, 4));
+    add(_hitbox!);
   }
 
   void moveToLane(int lane) {
@@ -287,7 +237,8 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
       _jumpOffset += (target - _jumpOffset) * math.min(1.0, 6 * dt);
     } else if (isRiding) {
       _jumpOffset += (rideElevation - _jumpOffset) * math.min(1.0, 16 * dt);
-      if ((rideElevation - _jumpOffset).abs() < 0.5) _jumpOffset = rideElevation;
+      if ((rideElevation - _jumpOffset).abs() < 0.5)
+        _jumpOffset = rideElevation;
     } else if (isJumping) {
       _jumpTime += dt * (_diving ? _diveSpeedup : 1.0);
       final t = (_jumpTime / _activeDur).clamp(0.0, 1.0).toDouble();
@@ -323,7 +274,11 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
     // ---- buffered input ----
     if (_bufferTimer > 0) {
       _bufferTimer -= dt;
-      if (_buffered != null && !isJumping && !isSliding && !isRiding && !isGameOver) {
+      if (_buffered != null &&
+          !isJumping &&
+          !isSliding &&
+          !isRiding &&
+          !isGameOver) {
         final a = _buffered!;
         _buffered = null;
         _bufferTimer = 0;
@@ -398,32 +353,24 @@ class RunnerPlayer extends SpriteAnimationComponent with CollisionCallbacks {
       canvas.drawCircle(
         Offset(size.x / 2, size.y * 0.55),
         size.y * 0.58,
-        Paint()..color = const Color(0xFFFF9800).withOpacity(0.18 + 0.08 * math.sin(_flameT * 8)),
-      );
-    }
-
-    if (shielded && !flying) {
-      // thin blue ring: a shield is banked and will absorb the next hit
-      canvas.drawCircle(
-        Offset(size.x / 2, size.y * 0.55),
-        size.y * 0.62,
         Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..color = const Color(0xFF29B6F6).withOpacity(0.5 + 0.25 * math.sin(_flameT * 6)),
+          ..color = const Color(0xFFFF9800)
+              .withOpacity(0.18 + 0.08 * math.sin(_flameT * 8)),
       );
     }
 
     final blink = graceTime > 0 && ((graceTime * 10).floor() % 2 == 0);
     if (blink) {
-      canvas.saveLayer(null, Paint()..color = const Color.fromRGBO(255, 255, 255, 0.4));
+      canvas.saveLayer(
+          null, Paint()..color = const Color.fromRGBO(255, 255, 255, 0.4));
     }
     super.render(canvas);
     if (blink) canvas.restore();
 
     if ((rocketBoots || flying) && !isSliding) {
       final flick = 0.75 + 0.25 * math.sin(_flameT * 40);
-      final len = (flying ? 30.0 : (isJumping ? 20.0 : 6.0)) * flick; // rocket > jump > ground sparks
+      final len = (flying ? 30.0 : (isJumping ? 20.0 : 6.0)) *
+          flick; // rocket > jump > ground sparks
       final baseY = size.y - 3;
       for (final fx in const [0.36, 0.64]) {
         final x = size.x * fx;

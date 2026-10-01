@@ -17,27 +17,16 @@ class _Building {
   const _Building(this.x, this.w, this.h);
 }
 
-enum _Env { station, forest, water }
-
-/// One "world" you can run in. Each corner sends you into a different one.
+/// Colours of one "view". Every corner you turn switches to the next theme.
 class _Theme {
-  final String name; // shown on the junction sign
-  final _Env kind;
   final Color skyTop, skyBottom, skyline, groundTop, groundBottom;
-  final Color bedTop, bedBottom, floor, accent;
   final Color wall, wallCap, wallBase, pillar, haze;
   const _Theme({
-    required this.name,
-    required this.kind,
     required this.skyTop,
     required this.skyBottom,
     required this.skyline,
     required this.groundTop,
     required this.groundBottom,
-    required this.bedTop,
-    required this.bedBottom,
-    required this.floor,
-    required this.accent,
     required this.wall,
     required this.wallCap,
     required this.wallBase,
@@ -58,52 +47,38 @@ class GameBackground extends Component {
 
   // ---- views / corners (driven by SubwayGame) ----
   static const List<_Theme> _themes = [
-    // 0: the subway station (the original look)
+    // 0: daytime station (the original look)
     _Theme(
-      name: 'STATION', kind: _Env.station,
       skyTop: Color(0xFF4FA8DE), skyBottom: Color(0xFFCDEBF7), skyline: Color(0xFF93B9CF),
       groundTop: Color(0xFF8A8F98), groundBottom: Color(0xFF585C64),
-      bedTop: Color(0xFF5D554A), bedBottom: Color(0xFF453D33),
-      floor: Color(0xFF56524A), accent: Color(0xFF6F7C8C),
       wall: Color(0xFF80858E), wallCap: Color(0xFFA3A8B1), wallBase: Color(0xFF5A5E66),
       pillar: Color(0xFF666B74), haze: Color(0xFFCDEBF7),
     ),
-    // 1: forest - grass, trees, a dirt path
+    // 1: sunset
     _Theme(
-      name: 'FOREST', kind: _Env.forest,
-      skyTop: Color(0xFF7CC4E8), skyBottom: Color(0xFFDDF2E0), skyline: Color(0xFF3F7D45),
-      groundTop: Color(0xFF6DB85A), groundBottom: Color(0xFF2F6B2E),
-      bedTop: Color(0xFF8A6B47), bedBottom: Color(0xFF5E4630),
-      floor: Color(0xFF7A5C3C), accent: Color(0xFF3E9B3E),
-      wall: Color(0xFF2F6B2E), wallCap: Color(0xFF4C9A3F), wallBase: Color(0xFF1F4A20),
-      pillar: Color(0xFF255A26), haze: Color(0xFFDDF2E0),
+      skyTop: Color(0xFFE8743B), skyBottom: Color(0xFFFFD29A), skyline: Color(0xFFB9836B),
+      groundTop: Color(0xFF9A8F88), groundBottom: Color(0xFF5F5650),
+      wall: Color(0xFF8E7F7A), wallCap: Color(0xFFB5A49E), wallBase: Color(0xFF61524D),
+      pillar: Color(0xFF75655F), haze: Color(0xFFFFD29A),
     ),
-    // 2: water - a wooden pier over the sea
+    // 2: night
     _Theme(
-      name: 'WATER', kind: _Env.water,
-      skyTop: Color(0xFF5BB8F0), skyBottom: Color(0xFFE6F6FF), skyline: Color(0xFF7FB3C9),
-      groundTop: Color(0xFF49B4E0), groundBottom: Color(0xFF1C6FA6),
-      bedTop: Color(0xFF9B7B52), bedBottom: Color(0xFF6B5237),
-      floor: Color(0xFF8A6C47), accent: Color(0xFF2A8BD0),
-      wall: Color(0xFF7E93A6), wallCap: Color(0xFFA9BBCB), wallBase: Color(0xFF56687A),
-      pillar: Color(0xFF677B8E), haze: Color(0xFFE6F6FF),
+      skyTop: Color(0xFF0B1638), skyBottom: Color(0xFF34508C), skyline: Color(0xFF1D2C55),
+      groundTop: Color(0xFF3B4150), groundBottom: Color(0xFF20232C),
+      wall: Color(0xFF404760), wallCap: Color(0xFF5A6482), wallBase: Color(0xFF262B3C),
+      pillar: Color(0xFF313852), haze: Color(0xFF34508C),
     ),
   ];
   static int get themeCount => _themes.length;
-  static String envName(int i) => _themes[i % _themes.length].name;
 
   /// Depth of the near edge of a T-junction ahead (null = straight track).
   double? cornerZ;
 
-  /// Which world the LEFT / RIGHT way of the junction leads to.
-  int leftDest = 1;
-  int rightDest = 2;
-
   /// How deep the cross corridor is (depth units) before its far wall.
   static const double cornerDepth = 1.2;
 
-  int theme = 0; // world currently in use (the NEW world while turning)
-  int oldTheme = 0; // world we are turning away from
+  int theme = 0; // view currently in use (the NEW view while turning)
+  int oldTheme = 0; // view we are turning away from
   int turnDir = 0; // -1 = turning left, 1 = turning right, 0 = not turning
   double turnT = 0; // 0..1 progress of the swing while turning
 
@@ -111,8 +86,6 @@ class GameBackground extends Component {
     cornerZ = null;
     theme = 0;
     oldTheme = 0;
-    leftDest = 1;
-    rightDest = 2;
     turnDir = 0;
     turnT = 0;
   }
@@ -220,25 +193,8 @@ class GameBackground extends Component {
       canvas.drawCircle(Offset(c.x - r * 1.0, c.y + r * 0.25), r * 0.75, cloudPaint);
     }
     final skylinePaint = Paint()..color = th.skyline;
-    if (th.kind == _Env.water) {
-      canvas.drawCircle(Offset(w * 0.72, hy * 0.5), 24, Paint()..color = const Color(0xCCFFF3B0));
-    }
     for (final b in _skyline) {
-      if (th.kind == _Env.station) {
-        canvas.drawRect(Rect.fromLTWH(b.x, hy - b.h, b.w, b.h), skylinePaint);
-      } else if (th.kind == _Env.forest) {
-        // rolling forested hills
-        canvas.drawOval(
-          Rect.fromLTWH(b.x - b.w * 0.4, hy - b.h, b.w * 1.8, b.h * 2.0),
-          skylinePaint,
-        );
-      } else {
-        // low, distant islands
-        canvas.drawOval(
-          Rect.fromLTWH(b.x - b.w, hy - b.h * 0.25, b.w * 3.0, b.h * 0.5),
-          skylinePaint,
-        );
-      }
+      canvas.drawRect(Rect.fromLTWH(b.x, hy - b.h, b.w, b.h), skylinePaint);
     }
 
     // ---- ground (platform)
@@ -252,8 +208,6 @@ class GameBackground extends Component {
           colors: [th.groundTop, th.groundBottom],
         ).createShader(groundRect),
     );
-
-    _drawGroundDetail(canvas, th);
 
     // ---- junction: cross corridor floor + the wall at its far side
     if (cz != null) _drawCorner(canvas, cz, th);
@@ -270,10 +224,10 @@ class GameBackground extends Component {
     canvas.drawPath(
       bed,
       Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [th.bedTop, th.bedBottom],
+          colors: [Color(0xFF5D554A), Color(0xFF453D33)],
         ).createShader(groundRect),
     );
     final edgeLine = Paint()
@@ -283,16 +237,9 @@ class GameBackground extends Component {
     canvas.drawLine(gp(nearL, zEnd), Offset(p.xAtRow(nearL, h), h), edgeLine);
     canvas.drawLine(gp(nearR, zEnd), Offset(p.xAtRow(nearR, h), h), edgeLine);
 
-    // ---- side scenery: walls (station), trees (forest), pier railing (water)
-    for (final side in const [-1.0, 1.0]) {
-      if (th.kind == _Env.station) {
-        _drawWall(canvas, side, th, zEnd);
-      } else if (th.kind == _Env.forest) {
-        _drawTrees(canvas, side, zEnd);
-      } else {
-        _drawRailing(canvas, side, zEnd);
-      }
-    }
+    // ---- side walls with scrolling ad panels
+    _drawWall(canvas, -1, th, zEnd);
+    _drawWall(canvas, 1, th, zEnd);
 
     // ---- sleepers (one short plank per lane per step)
     const sd = 0.40;
@@ -380,7 +327,7 @@ class GameBackground extends Component {
   }
 
   /// The T-junction: a floor running left/right across the track's end and a
-  /// wall on its far side with a sign for each way ("WATER", "FOREST", ...).
+  /// wall on its far side with two big arrows on it.
   void _drawCorner(Canvas canvas, double cz, _Theme th) {
     final p = persp;
     final w = p.width;
@@ -393,7 +340,7 @@ class GameBackground extends Component {
     // cross corridor floor
     canvas.drawRect(
       Rect.fromLTRB(0, yBot, w, p.groundY(cz)),
-      Paint()..color = th.floor,
+      Paint()..color = const Color(0xFF56524A),
     );
     // far wall (face, cap, baseboard)
     canvas.drawRect(Rect.fromLTRB(0, yTop, w, yBot), Paint()..color = th.wall);
@@ -406,28 +353,21 @@ class GameBackground extends Component {
       Paint()..color = th.wallBase,
     );
 
-    // one sign per way: coloured by the world it leads to, with an arrow
+    // big arrows: left and right
     final yMid = yBot - 0.5 * wallH / zw;
     final s = p.laneSpacing * 0.42 / zw;
+    final panel = Paint()..color = const Color(0x99000000);
     final arrowPaint = Paint()..color = const Color(0xFFF2C230);
     for (final d in const [-1.0, 1.0]) {
-      final dest = _themes[(d < 0 ? leftDest : rightDest) % _themes.length];
       final cx = p.xAt(p.vanishX + d * p.laneSpacing * 1.3, zw);
-      final box = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, yMid), width: s * 3.0, height: s * 2.3),
-        Radius.circular(s * 0.3),
-      );
-      canvas.drawRRect(box, Paint()..color = dest.accent);
       canvas.drawRRect(
-        box,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(1.0, s * 0.08)
-          ..color = Colors.white,
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(cx, yMid), width: s * 2.8, height: s * 2.2),
+          Radius.circular(s * 0.3),
+        ),
+        panel,
       );
-      _drawLabel(canvas, dest.name, Offset(cx, yMid - s * 0.72), s * 0.5);
-
-      Offset a(double x, double y) => Offset(cx + d * x * s, yMid + s * 0.3 + y * s * 0.7);
+      Offset a(double x, double y) => Offset(cx + d * x * s, yMid + y * s);
       final arrow = Path()
         ..moveTo(a(1.0, 0).dx, a(1.0, 0).dy)
         ..lineTo(a(0.0, -0.8).dx, a(0.0, -0.8).dy)
@@ -438,145 +378,6 @@ class GameBackground extends Component {
         ..lineTo(a(0.0, 0.8).dx, a(0.0, 0.8).dy)
         ..close();
       canvas.drawPath(arrow, arrowPaint);
-    }
-  }
-
-  void _drawLabel(Canvas canvas, String text, Offset center, double fontSize) {
-    if (fontSize < 5) return; // too far away to read
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w900),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
-  }
-
-  /// Small deterministic pseudo-random number 0..1 for scenery variety.
-  double _hash(int i, int salt) => ((i * 7919 + salt * 104729) % 97) / 97.0;
-
-  /// Moving ground texture: mown-grass stripes (forest) or ripples (water).
-  void _drawGroundDetail(Canvas canvas, _Theme th) {
-    final p = persp;
-    final w = p.width;
-    if (th.kind == _Env.forest) {
-      const dz = 0.9;
-      final shift = _offset % dz;
-      final baseIdx = (_offset / dz).floor();
-      final paint = Paint()..color = const Color(0x1AFFFFFF);
-      for (var n = 0; n < 24; n++) {
-        if ((baseIdx + n) % 2 != 0) continue;
-        final zb = n * dz - shift + dz;
-        if (zb <= 0.55) continue;
-        final za = math.max(n * dz - shift, 0.55);
-        canvas.drawRect(Rect.fromLTRB(0, p.groundY(zb), w, p.groundY(za)), paint);
-      }
-    } else if (th.kind == _Env.water) {
-      const dz = 0.7;
-      final shift = _offset % dz;
-      final baseIdx = (_offset / dz).floor();
-      for (var n = 0; n < 30; n++) {
-        final z = n * dz - shift;
-        if (z < 0.6) continue;
-        final idx = baseIdx + n;
-        final y = p.groundY(z);
-        final paint = Paint()
-          ..color = const Color(0x66FFFFFF)
-          ..strokeWidth = math.max(1.0, 2.2 / z);
-        for (var k = 0; k < 3; k++) {
-          final cx = _hash(idx, 20 + k) * w;
-          final len = 26 / z + 6;
-          canvas.drawLine(Offset(cx - len, y), Offset(cx + len, y), paint);
-        }
-      }
-    }
-  }
-
-  /// Forest: trees and bushes streaming past on one side of the path.
-  void _drawTrees(Canvas canvas, double sign, double zEnd) {
-    final p = persp;
-    final zMax = math.min(16.0, zEnd);
-    const dz = 0.9;
-    final shift = _offset % dz;
-    final baseIdx = (_offset / dz).floor();
-    final salt = sign > 0 ? 5 : 11;
-    final trunkPaint = Paint()..color = const Color(0xFF6B4A2B);
-    final bushPaint = Paint()..color = const Color(0xFF2F7A34);
-
-    for (var n = 20; n >= 0; n--) {
-      final z = n * dz - shift + (sign > 0 ? dz * 0.5 : 0.0);
-      if (z < 0.6 || z >= zMax) continue;
-      final idx = baseIdx + n;
-
-      // tree
-      final x = p.vanishX + sign * p.laneSpacing * (2.4 + 0.8 * _hash(idx, salt));
-      final size = 0.85 + 0.5 * _hash(idx, salt + 1);
-      final base = Offset(p.xAt(x, z), p.groundY(z));
-      final sc = p.laneSpacing * size / z;
-      canvas.drawRect(
-        Rect.fromLTWH(base.dx - 0.09 * sc, base.dy - 0.9 * sc, 0.18 * sc, 0.9 * sc),
-        trunkPaint,
-      );
-      final dark = Paint()
-        ..color = _hash(idx, salt + 2) > 0.5 ? const Color(0xFF2E7D32) : const Color(0xFF3B8B3A);
-      canvas.drawCircle(Offset(base.dx, base.dy - 1.35 * sc), 0.62 * sc, dark);
-      canvas.drawCircle(Offset(base.dx - 0.3 * sc, base.dy - 1.1 * sc), 0.45 * sc, dark);
-      canvas.drawCircle(Offset(base.dx + 0.32 * sc, base.dy - 1.15 * sc), 0.42 * sc, dark);
-      canvas.drawCircle(
-        Offset(base.dx - 0.12 * sc, base.dy - 1.55 * sc),
-        0.3 * sc,
-        Paint()..color = const Color(0xFF4CAF50),
-      );
-
-      // bush closer to the path
-      final zb = z - 0.3;
-      if (zb >= 0.6) {
-        final bx = p.vanishX + sign * p.laneSpacing * (1.85 + 0.2 * _hash(idx, salt + 3));
-        final bBase = Offset(p.xAt(bx, zb), p.groundY(zb));
-        final bs = p.laneSpacing * 0.3 / zb;
-        canvas.drawCircle(Offset(bBase.dx, bBase.dy - 0.5 * bs), bs, bushPaint);
-        canvas.drawCircle(Offset(bBase.dx + 0.7 * bs, bBase.dy - 0.3 * bs), bs * 0.7, bushPaint);
-      }
-    }
-  }
-
-  /// Water: wooden railing along the edge of the pier (posts scroll past).
-  void _drawRailing(Canvas canvas, double sign, double zEnd) {
-    final p = persp;
-    const zMin = 0.6;
-    final zMax = math.min(16.0, zEnd);
-    final nearX = p.vanishX + sign * p.laneSpacing * 1.78;
-    Offset pt(double z, double hf) => Offset(p.xAt(nearX, z), p.groundY(z) - hf * p.laneSpacing / z);
-
-    final rail = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..color = const Color(0xFFC9A46A);
-    canvas.drawLine(pt(zMin, 0.55), pt(zMax, 0.55), rail);
-    canvas.drawLine(pt(zMin, 0.28), pt(zMax, 0.28), rail);
-    canvas.drawLine(
-      pt(zMin, 0),
-      pt(zMax, 0),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..color = const Color(0xFF5B4530),
-    );
-
-    const dz = 0.7;
-    final shift = _offset % dz;
-    for (var n = 24; n >= 0; n--) {
-      final z = n * dz - shift;
-      if (z < zMin || z >= zMax) continue;
-      canvas.drawLine(
-        pt(z, 0),
-        pt(z, 0.62),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(1.5, 4.0 / z)
-          ..color = const Color(0xFF7A5A3A),
-      );
     }
   }
 

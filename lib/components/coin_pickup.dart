@@ -37,13 +37,13 @@ class CoinPickup extends WorldEntity {
   /// While flying, the magnet covers all three lanes.
   @override
   bool get overlapsPlayer {
-    if (player.isFlying || player.hasMagnet) return z <= 1.14 && z >= 0.6;
+    if (player.isFlying) return z <= 1.14 && z >= 0.6;
     return super.overlapsPlayer;
   }
 
   @override
   void onOverlap({required bool justStarted}) {
-    if (player.isFlying || player.hasMagnet) {
+    if (player.isFlying) {
       onCollected();
       removeFromParent();
       return;
@@ -65,7 +65,7 @@ class CoinPickup extends WorldEntity {
     var cx = persp.xAt(laneNearX, zz);
     final ground = persp.groundY(zz);
     var cy = ground - (height + radius1) / zz;
-    if (player.isFlying || player.hasMagnet) {
+    if (player.isFlying) {
       // magnet: coins stream toward Jack as they get close
       final t = ((3.0 - z) / 2.0).clamp(0.0, 1.0).toDouble();
       cx += (player.position.x + player.size.x / 2 - cx) * t;

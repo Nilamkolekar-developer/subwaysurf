@@ -36,13 +36,13 @@ class KeyPickup extends WorldEntity {
   /// While flying, the magnet covers all three lanes.
   @override
   bool get overlapsPlayer {
-    if (player.isFlying || player.hasMagnet) return z <= 1.14 && z >= 0.6;
+    if (player.isFlying) return z <= 1.14 && z >= 0.6;
     return super.overlapsPlayer;
   }
 
   @override
   void onOverlap({required bool justStarted}) {
-    if (player.isFlying || player.hasMagnet) {
+    if (player.isFlying) {
       onCollected();
       removeFromParent();
       return;
@@ -63,7 +63,7 @@ class KeyPickup extends WorldEntity {
     final ground = persp.groundY(zz);
     final bob = math.sin(_t * 4) * r * 0.18;
     var cy = ground - (_floatHeight + radius1) / zz + bob;
-    if (player.isFlying || player.hasMagnet) {
+    if (player.isFlying) {
       final t = ((3.0 - z) / 2.0).clamp(0.0, 1.0).toDouble();
       cx += (player.position.x + player.size.x / 2 - cx) * t;
       cy += (player.position.y + player.size.y / 2 - cy) * t;
