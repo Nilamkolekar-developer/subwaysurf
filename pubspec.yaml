@@ -11,7 +11,6 @@ dependencies:
     sdk: flutter
   flame: ^1.18.0
   shared_preferences: ^2.3.0
-  window_manager: ^0.3.9
 
 dev_dependencies:
   flutter_test:
@@ -22,10 +21,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/redcap_sheet.png
-    - assets/images/redcap_sheet_blue.png
-    - assets/images/redcap_sheet_green.png
-    - assets/images/redcap_sheet_purple.png
-    - assets/images/redcap_sheet_gold.png
     - assets/images/train_front_yellow.png
     - assets/images/train_front_red.png
     - assets/images/train_front_blue.png
